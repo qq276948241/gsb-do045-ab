@@ -113,6 +113,96 @@ func TestLinkValidationBrokenAnchor(t *testing.T) {
 	}
 }
 
+func TestLinkValidationAnchorNormalization(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{
+			name:    "extra spaces in link target",
+			content: "# Title\n\n## Hello World\n\n[link](#hello  world)\n",
+		},
+		{
+			name:    "case difference in link target",
+			content: "# Title\n\n## Hello World\n\n[link](#Hello-World)\n",
+		},
+		{
+			name:    "comma preserved on both sides",
+			content: "# Title\n\n## Hello, World\n\n[link](#hello,-world)\n",
+		},
+		{
+			name:    "spaces folded in generated heading",
+			content: "# Title\n\n## Hello   World\n\n[link](#hello-world)\n",
+		},
+	}
+
+	s := &schema.Schema{
+		Structure: []schema.StructureElement{
+			{Heading: schema.HeadingPattern{Pattern: "# Title"}},
+		},
+		Links: &schema.LinkRule{
+			ValidateInternal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := parser.New()
+			doc, err := p.Parse("test.md", []byte(tc.content))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			ctx := vast.NewContext(doc, s, "")
+			violations := NewLinkValidationRule().ValidateWithContext(ctx)
+			if len(violations) != 0 {
+				t.Errorf("expected normalized anchor link to pass, got %d: %v", len(violations), violations)
+			}
+		})
+	}
+}
+
+func TestLinkValidationEmptyAnchor(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{name: "bare hash", content: "# Title\n\n[link](#)\n"},
+		{name: "only spaces after hash", content: "# Title\n\n[link](#   )\n"},
+	}
+
+	s := &schema.Schema{
+		Links: &schema.LinkRule{
+			ValidateInternal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := parser.New()
+			doc, err := p.Parse("test.md", []byte(tc.content))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			ctx := vast.NewContext(doc, s, "")
+			violations := NewLinkValidationRule().ValidateWithContext(ctx)
+			if len(violations) == 0 {
+				t.Fatal("expected violation for empty anchor, got none")
+			}
+			found := false
+			for _, v := range violations {
+				if strings.Contains(v.Message, "empty") {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("expected an empty-anchor violation, got: %v", violations)
+			}
+		})
+	}
+}
+
 func TestLinkValidationValidFileLink(t *testing.T) {
 	tmpDir := t.TempDir()
 

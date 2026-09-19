@@ -39,8 +39,14 @@ func NewContext(doc *parser.Document, s *schema.Schema, rootDir string) *Context
 	// Build slug index for link validation
 	// Handle duplicates with global uniqueness (avoid collisions with literal "-N" suffixes)
 	for _, section := range doc.GetSections() {
-		if section.Heading != nil && section.Heading.Slug != "" {
-			slug := section.Heading.Slug
+		if section.Heading != nil {
+			// Always recompute the anchor with the single shared normalization
+			// so a stale/divergent slug is never kept as a separate comparison.
+			slug := parser.NormalizeAnchor(section.Heading.Text)
+			section.Heading.Slug = slug
+			if slug == "" {
+				continue
+			}
 
 			// If slug already exists, find a unique one
 			if _, exists := ctx.slugIndex[slug]; exists {

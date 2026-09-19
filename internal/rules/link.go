@@ -79,7 +79,11 @@ func (r *LinkValidationRule) validateLink(link *parser.Link, rule *schema.LinkRu
 	// Anchor links (#section-name)
 	if anchor, found := strings.CutPrefix(url, "#"); found {
 		if rule.ValidateInternal {
-			if !ctx.HasSlug(anchor) {
+			normalized := parser.NormalizeAnchor(anchor)
+			if normalized == "" {
+				violations = append(violations,
+					NewViolation(r.Name(), fmt.Sprintf("Broken internal link: anchor '%s' is empty", url), link.Line, link.Column))
+			} else if !ctx.HasSlug(normalized) {
 				violations = append(violations,
 					NewViolation(r.Name(), fmt.Sprintf("Broken internal link: anchor '%s' does not exist in the document", url), link.Line, link.Column))
 			}

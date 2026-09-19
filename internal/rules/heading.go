@@ -2,7 +2,6 @@ package rules
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/jackchuka/mdschema/internal/parser"
 	"github.com/jackchuka/mdschema/internal/vast"
@@ -108,7 +107,7 @@ func (r *HeadingRule) validateUniqueHeadings(headings []*parser.Heading) []Viola
 	seen := make(map[string]*parser.Heading)
 
 	for _, h := range headings {
-		normalizedText := strings.ToLower(strings.TrimSpace(h.Text))
+		normalizedText := parser.NormalizeText(h.Text)
 		if existing, ok := seen[normalizedText]; ok {
 			violations = append(violations,
 				NewViolation(r.Name(), fmt.Sprintf("Duplicate heading '%s' (first occurrence at line %d)", h.Text, existing.Line), h.Line, h.Column))
@@ -132,7 +131,7 @@ func (r *HeadingRule) validateUniquePerLevel(headings []*parser.Heading) []Viola
 			seenByLevel[h.Level] = make(map[string]*parser.Heading)
 		}
 
-		normalizedText := strings.ToLower(strings.TrimSpace(h.Text))
+		normalizedText := parser.NormalizeText(h.Text)
 		if existing, ok := seenByLevel[h.Level][normalizedText]; ok {
 			violations = append(violations,
 				NewViolation(r.Name(), fmt.Sprintf("Duplicate h%d heading '%s' (first occurrence at line %d)", h.Level, h.Text, existing.Line), h.Line, h.Column))

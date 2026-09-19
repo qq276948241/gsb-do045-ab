@@ -262,19 +262,54 @@ func TestGenerateSlug(t *testing.T) {
 		{"Simple Title", "simple-title"},
 		{"UPPERCASE", "uppercase"},
 		{"With   Multiple   Spaces", "with-multiple-spaces"}, // collapses multiple hyphens (GitHub-like)
-		{"Special!@#Characters", "specialcharacters"},        // removes special chars (GitHub-like)
+		{"Special!@#Characters", "special!@#characters"},     // punctuation is preserved, only case/spaces folded
 		{"Numbers 123", "numbers-123"},
 		{"", ""},
 		{"Already-Slugged", "already-slugged"},
-		{"Hello, World!", "hello-world"},           // punctuation removed
-		{"foo_bar_baz", "foo_bar_baz"},             // underscores preserved
-		{"API Reference (v2)", "api-reference-v2"}, // parens removed
+		{"Hello, World!", "hello,-world!"},           // commas are kept, not dropped
+		{"  # after spaces  ", "#-after-spaces"},     // surrounding spaces trimmed
+		{"foo_bar_baz", "foo_bar_baz"},               // underscores preserved
+		{"API Reference (v2)", "api-reference-(v2)"}, // parens preserved
 	}
 
 	for _, tc := range tests {
 		got := GenerateSlug(tc.input)
 		if got != tc.want {
 			t.Errorf("GenerateSlug(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestNormalizeTextAndAnchor(t *testing.T) {
+	textCases := []struct {
+		input string
+		want  string
+	}{
+		{"  Hello   World  ", "hello world"},
+		{"Hello, World", "hello, world"},
+		{"UPPER  lower", "upper lower"},
+		{"   ", ""},
+		{"", ""},
+	}
+	for _, tc := range textCases {
+		if got := NormalizeText(tc.input); got != tc.want {
+			t.Errorf("NormalizeText(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+
+	anchorCases := []struct {
+		input string
+		want  string
+	}{
+		{"Hello   World", "hello-world"},
+		{"Hello, World!", "hello,-world!"},
+		{"  # Section  ", "#-section"},
+		{"   ", ""},
+		{"", ""},
+	}
+	for _, tc := range anchorCases {
+		if got := NormalizeAnchor(tc.input); got != tc.want {
+			t.Errorf("NormalizeAnchor(%q) = %q, want %q", tc.input, got, tc.want)
 		}
 	}
 }

@@ -76,38 +76,37 @@ func calculateLineColumn(content []byte, offset int) (line, col int) {
 }
 
 func GenerateSlug(text string) string {
-	// GitHub-compatible slug generation:
-	// 1. Convert to lowercase
-	// 2. Remove characters that aren't alphanumeric, space, hyphen, or underscore
-	// 3. Replace spaces with hyphens
-	// 4. Collapse multiple consecutive hyphens
-	slug := strings.ToLower(text)
+	return NormalizeAnchor(text)
+}
 
-	// Build slug character by character
-	var result strings.Builder
-	for _, r := range slug {
-		switch {
-		case r >= 'a' && r <= 'z':
-			result.WriteRune(r)
-		case r >= '0' && r <= '9':
-			result.WriteRune(r)
-		case r == ' ' || r == '-':
-			result.WriteRune('-')
-		case r == '_':
-			result.WriteRune('_')
-			// Skip all other characters (punctuation, special chars, etc.)
-		}
+// NormalizeText is the single normalization used everywhere headings or
+// internal anchors are compared:
+//  1. Trim surrounding whitespace
+//  2. Fold consecutive spaces into a single space
+//  3. Convert to lowercase
+//
+// Commas (and other punctuation) are preserved; only spaces and case are
+// folded. Heading parsing, anchor generation/slug indexing, internal link
+// checks, and heading uniqueness rules must all compare via this function so
+// they never disagree.
+func NormalizeText(text string) string {
+	return strings.ToLower(strings.Join(strings.Fields(text), " "))
+}
+
+// NormalizeAnchor reduces a heading or an internal link target to the anchor
+// form used for comparison. It applies NormalizeText first, then maps the
+// normalized spaces to hyphens. Commas are retained, so "Hello, World" and a
+// link to "#hello,-world" resolve to the same anchor "hello,-world".
+//
+// An input containing only whitespace (e.g. the target after a bare "# ")
+// normalizes to the empty string, which callers must treat as an invalid
+// anchor rather than a match.
+func NormalizeAnchor(text string) string {
+	normalized := NormalizeText(text)
+	if normalized == "" {
+		return ""
 	}
-
-	slug = result.String()
-
-	// Collapse multiple consecutive hyphens
-	for strings.Contains(slug, "--") {
-		slug = strings.ReplaceAll(slug, "--", "-")
-	}
-
-	slug = strings.Trim(slug, "-")
-	return slug
+	return strings.ReplaceAll(normalized, " ", "-")
 }
 
 func isInternalLink(url string) bool {
