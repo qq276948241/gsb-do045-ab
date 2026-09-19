@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
@@ -76,40 +77,59 @@ func calculateLineColumn(content []byte, offset int) (line, col int) {
 }
 
 func GenerateSlug(text string) string {
-	// GitHub-compatible slug generation:
-	// 1. Convert to lowercase
-	// 2. Remove characters that aren't alphanumeric, space, hyphen, or underscore
-	// 3. Replace spaces with hyphens
-	// 4. Collapse multiple consecutive hyphens
-	slug := strings.ToLower(text)
-
-	// Build slug character by character
-	var result strings.Builder
-	for _, r := range slug {
-		switch {
-		case r >= 'a' && r <= 'z':
-			result.WriteRune(r)
-		case r >= '0' && r <= '9':
-			result.WriteRune(r)
-		case r == ' ' || r == '-':
-			result.WriteRune('-')
-		case r == '_':
-			result.WriteRune('_')
-			// Skip all other characters (punctuation, special chars, etc.)
-		}
-	}
-
-	slug = result.String()
-
-	// Collapse multiple consecutive hyphens
-	for strings.Contains(slug, "--") {
-		slug = strings.ReplaceAll(slug, "--", "-")
-	}
-
-	slug = strings.Trim(slug, "-")
-	return slug
+	// Slug generation is a direct rendering of the shared canonical heading
+	// form: words are joined with single hyphens. Every other stage (heading
+	// parsing, link checking, heading rules) compares against this same form.
+	return strings.ReplaceAll(NormalizeHeading(text), " ", "-")
 }
 
 func isInternalLink(url string) bool {
 	return !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://")
+}
+
+// NormalizeHeading reduces a heading (or any text compared as a heading) to a
+// single canonical form shared by heading parsing, anchor generation, internal
+// link checking, and heading rules:
+//  1. Convert to lowercase (case never matters)
+//  2. Treat spaces and hyphens as word separators
+//  3. Collapse runs of separators (including multiple consecutive spaces)
+//  4. Keep every other character, including commas
+//
+// The result uses single spaces between words; GenerateSlug renders the same
+// form with hyphens. An empty result means the text carries no anchor (e.g.
+// punctuation or whitespace only).
+func NormalizeHeading(text string) string {
+	var words []string
+	var current strings.Builder
+	flush := func() {
+		if current.Len() > 0 {
+			words = append(words, current.String())
+			current.Reset()
+		}
+	}
+
+	for _, r := range strings.ToLower(text) {
+		if unicode.IsSpace(r) || r == '-' {
+			flush()
+			continue
+		}
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_', r == ',':
+			current.WriteRune(r)
+		default:
+			// Other punctuation and unsupported characters do not take part
+			// in the anchor; commas above are deliberately retained.
+		}
+	}
+	flush()
+
+	return strings.Join(words, " ")
+}
+
+// NormalizeAnchor applies the same canonicalization as NormalizeHeading to the
+// fragment of an internal link. Link fragments conventionally use hyphens, so
+// spaces and hyphens collapse to the same separators; case and repeated spaces
+// are folded away and commas are preserved.
+func NormalizeAnchor(anchor string) string {
+	return NormalizeHeading(anchor)
 }

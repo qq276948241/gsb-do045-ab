@@ -181,6 +181,56 @@ func TestHeadingRuleUniqueHeadingsValid(t *testing.T) {
 	}
 }
 
+func TestHeadingRuleUniqueHeadingsSharedNormalization(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"case difference", "# Title\n\n## Features\n\n## FEATURES\n"},
+		{"extra spaces", "# Title\n\n## Hello World\n\n## Hello   World\n"},
+		{"hyphen spelling", "# Title\n\n## Hello World\n\n## Hello-World\n"},
+		{"comma kept", "# Title\n\n## Hello, World\n\n## hello, world\n"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := parser.New()
+			doc, err := p.Parse("test.md", []byte(tc.body))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			s := &schema.Schema{
+				HeadingRules: &schema.HeadingRules{Unique: true},
+			}
+
+			ctx := vast.NewContext(doc, s, "")
+			violations := NewHeadingRule().ValidateWithContext(ctx)
+			if len(violations) == 0 {
+				t.Errorf("expected duplicate heading violation for %s", tc.body)
+			}
+		})
+	}
+}
+
+func TestHeadingRuleCommaKeepsHeadingsDistinct(t *testing.T) {
+	p := parser.New()
+	doc, err := p.Parse("test.md", []byte("# Title\n\n## Hello World\n\n## Hello, World\n"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	s := &schema.Schema{
+		HeadingRules: &schema.HeadingRules{Unique: true},
+	}
+
+	ctx := vast.NewContext(doc, s, "")
+	violations := NewHeadingRule().ValidateWithContext(ctx)
+	if len(violations) != 0 {
+		t.Errorf("comma must not be dropped; expected no violations, got %v", violations)
+	}
+}
+
 func TestHeadingRuleUniquePerLevel(t *testing.T) {
 	p := parser.New()
 	// Duplicate h2 headings (same level)

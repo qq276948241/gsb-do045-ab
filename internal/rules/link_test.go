@@ -608,6 +608,54 @@ func TestLinkValidationFrontmatterValidAnchor(t *testing.T) {
 	}
 }
 
+func TestLinkValidationAnchorSharedNormalization(t *testing.T) {
+	cases := []struct {
+		name  string
+		link  string
+		valid bool
+	}{
+		{"spaces in fragment", "[a](<#hello world>)", true},
+		{"extra spaces in fragment", "[a](<#hello   world>)", true},
+		{"case difference", "[a](#HELLO-WORLD)", true},
+		{"comma retained", "[a](#hello,-world)", true},
+		{"hyphen spelling", "[a](#hello-world)", true},
+		{"empty after hash", "[a](#)", false},
+		{"whitespace after hash", "[a](<#   >)", false},
+		{"missing anchor", "[a](#does-not-exist)", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := parser.New()
+			content := "# Title\n\n## Hello, World\n\n"
+			if tc.name == "case difference" || tc.name == "hyphen spelling" {
+				content = "# Title\n\n## Hello World\n\n"
+			}
+			if tc.name == "spaces in fragment" || tc.name == "extra spaces in fragment" {
+				content = "# Title\n\n## Hello World\n\n"
+			}
+			doc, err := p.Parse("test.md", []byte(content+tc.link+"\n"))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			s := &schema.Schema{
+				Links: &schema.LinkRule{ValidateInternal: true},
+			}
+
+			ctx := vast.NewContext(doc, s, "")
+			violations := NewLinkValidationRule().ValidateWithContext(ctx)
+
+			if tc.valid && len(violations) != 0 {
+				t.Errorf("expected no violations for %s, got %v", tc.link, violations)
+			}
+			if !tc.valid && len(violations) == 0 {
+				t.Errorf("expected a violation for %s, got none", tc.link)
+			}
+		})
+	}
+}
+
 func TestLinkValidationRootRelativePathBroken(t *testing.T) {
 	tmpDir := t.TempDir()
 

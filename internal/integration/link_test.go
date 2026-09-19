@@ -34,6 +34,13 @@ func TestLinkValidation(t *testing.T) {
 			ExpectedRule: "link",
 		},
 		{
+			Name:         "empty internal anchor",
+			FilePath:     testdataDir + "links/invalid_empty_anchor.md",
+			SchemaPath:   testdataDir + "links/.mdschema.yml",
+			ShouldPass:   false,
+			ExpectedRule: "link",
+		},
+		{
 			Name:         "broken file link",
 			FilePath:     testdataDir + "links/invalid_broken_file.md",
 			SchemaPath:   testdataDir + "links/.mdschema.yml",

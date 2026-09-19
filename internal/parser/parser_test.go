@@ -266,9 +266,11 @@ func TestGenerateSlug(t *testing.T) {
 		{"Numbers 123", "numbers-123"},
 		{"", ""},
 		{"Already-Slugged", "already-slugged"},
-		{"Hello, World!", "hello-world"},           // punctuation removed
+		{"Hello, World!", "hello,-world"},          // commas are retained
 		{"foo_bar_baz", "foo_bar_baz"},             // underscores preserved
 		{"API Reference (v2)", "api-reference-v2"}, // parens removed
+		{"Hello,,World", "hello,,world"},           // commas survive even between words
+		{"  #$%  ", ""},                            // punctuation/space only yields no anchor
 	}
 
 	for _, tc := range tests {
@@ -276,6 +278,37 @@ func TestGenerateSlug(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("GenerateSlug(%q) = %q, want %q", tc.input, got, tc.want)
 		}
+	}
+}
+
+func TestNormalizeHeadingSharedRules(t *testing.T) {
+	tests := []struct {
+		name string
+		a    string
+		b    string
+		want string
+	}{
+		{"case folded", "Getting Started", "GETTING started", "getting started"},
+		{"spaces collapsed", "Hello   World", "Hello World", "hello world"},
+		{"hyphens equal spaces", "Getting Started", "Getting-Started", "getting started"},
+		{"comma retained", "Hello, World", "hello, world", "hello, world"},
+		{"empty from whitespace", "#", "   ", ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			na := NormalizeHeading(tc.a)
+			nb := NormalizeAnchor(tc.b)
+			if na != tc.want {
+				t.Errorf("NormalizeHeading(%q) = %q, want %q", tc.a, na, tc.want)
+			}
+			if nb != tc.want {
+				t.Errorf("NormalizeAnchor(%q) = %q, want %q", tc.b, nb, tc.want)
+			}
+			if na != nb {
+				t.Errorf("headings and anchors normalize differently: %q vs %q", na, nb)
+			}
+		})
 	}
 }
 
