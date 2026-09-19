@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/jackchuka/mdschema/main/schema.json
+#
+# Schema for link validation tests
+links:
+  validate_internal: true
+  validate_files: true
+  blocked_domains:
+    - blocked-domain.com
+
+structure:
+  - heading: "# Test Document"
+    optional: true
+    children:
+      - heading: "## Introduction"
+        optional: true
+      - heading: "## Getting Started"
+        optional: true

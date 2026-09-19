@@ -1,0 +1,87 @@
+package rules
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/jackchuka/mdschema/internal/schema"
+	"github.com/jackchuka/mdschema/internal/vast"
+)
+
+// RequiredTextRule validates required text within sections
+type RequiredTextRule struct {
+}
+
+var _ StructuralRule = (*RequiredTextRule)(nil)
+
+// NewRequiredTextRule creates a new section content rule
+func NewRequiredTextRule() *RequiredTextRule {
+	return &RequiredTextRule{}
+}
+
+// Name returns the rule identifier
+func (r *RequiredTextRule) Name() string {
+	return "required-text"
+}
+
+// ValidateWithContext validates using VAST (validation-ready AST)
+func (r *RequiredTextRule) ValidateWithContext(ctx *vast.Context) []Violation {
+	violations := make([]Violation, 0)
+
+	// Walk through all bound nodes to find elements with required text rules
+	ctx.Tree.WalkBound(func(n *vast.Node) bool {
+		if n.Element.SectionRules != nil && len(n.Element.RequiredText) > 0 {
+			for _, pattern := range n.Element.RequiredText {
+				if !r.contentContainsPattern(n.Content(), pattern) {
+					patternStr := pattern.Literal
+					if patternStr == "" {
+						patternStr = pattern.Pattern
+					}
+					line, col := n.Location()
+					violations = append(violations,
+						NewViolation(r.Name(), fmt.Sprintf("Required text '%s' not found in section '%s'", patternStr, n.HeadingText()), line, col))
+				}
+			}
+		}
+		return true
+	})
+
+	return violations
+}
+
+// GenerateContent generates placeholder content for required text rules
+func (r *RequiredTextRule) GenerateContent(builder *strings.Builder, element schema.StructureElement) bool {
+	if element.SectionRules == nil || len(element.RequiredText) == 0 {
+		return false
+	}
+
+	// Add required text placeholders
+	builder.WriteString("<!-- This section must contain the following text: -->\n")
+	for _, pattern := range element.RequiredText {
+		if pattern.Pattern != "" {
+			fmt.Fprintf(builder, "<!-- - %s (regex) -->\n", pattern.Pattern)
+		} else {
+			fmt.Fprintf(builder, "<!-- - %s -->\n", pattern.Literal)
+		}
+	}
+	builder.WriteString("\n")
+
+	return true
+}
+
+// contentContainsPattern checks if content contains the required pattern
+func (r *RequiredTextRule) contentContainsPattern(content string, pattern schema.RequiredTextPattern) bool {
+	// If literal is set (scalar form), use substring match
+	if pattern.Literal != "" {
+		return strings.Contains(content, pattern.Literal)
+	}
+
+	// Otherwise use regex match
+	re, err := regexp.Compile(pattern.Pattern)
+	if err != nil {
+		// If regex compilation fails, fall back to substring match
+		return strings.Contains(content, pattern.Pattern)
+	}
+	return re.MatchString(content)
+}

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/jackchuka/mdschema/main/schema.json
+#
+# Schema for structure rule tests (no code block requirements)
+structure:
+  - heading:
+      pattern: "# [A-Z][a-z][a-zA-Z0-9 _-]*"
+    children:
+      - heading: "## Features"
+        optional: true
+      - heading: "## Installation"
+        children:
+          - heading: "### Windows"
+            optional: true
+          - heading: "### macOS"
+            optional: true
+      - heading: "## Usage"
+  - heading: "# LICENSE"
+    optional: true

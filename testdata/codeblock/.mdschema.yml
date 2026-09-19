@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/jackchuka/mdschema/main/schema.json
+#
+# Schema for codeblock rule tests
+structure:
+  - heading:
+      pattern: "# .*"
+    optional: true
+    children:
+      - heading: "## Installation"
+        optional: true
+        code_blocks:
+          - { lang: bash, min: 1 }
+      - heading: "## Usage"
+        optional: true
+        code_blocks:
+          - { lang: go, min: 2 }

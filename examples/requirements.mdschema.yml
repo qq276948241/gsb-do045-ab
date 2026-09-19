@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=../schema.json
+#
+# AI-friendly requirements.md schema
+# Ensures requirements documents follow a consistent, machine-readable structure
+
+structure:
+  - heading:
+      pattern: "# .*Requirements.*" # Regex: H1 containing "Requirements"
+    children:
+      - heading: "## Overview"
+        required_text:
+          - "purpose" # Literal: must contain these words
+          - "scope"
+
+      - heading: "## Functional Requirements"
+        allow_additional: true # Allow multiple FR### sections
+        children:
+          - heading:
+              pattern: "### FR001: .*" # Regex: first requirement
+            required_text:
+              - "shall"
+              - "must"
+
+      - heading: "## Non-Functional Requirements"
+        children:
+          - heading: "### Performance"
+            required_text:
+              - "response time"
+              - "throughput"
+          - heading: "### Security"
+            required_text:
+              - "authentication"
+              - "authorization"
+          - heading: "### Scalability"
+            optional: true
+          - heading: "### Reliability"
+            optional: true
+          - heading: "### Usability"
+            optional: true
+          - heading: "### Maintainability"
+            optional: true
+
+      - heading: "## Technical Requirements"
+        optional: true
+        children:
+          - heading: "### Architecture"
+            optional: true
+          - heading: "### Technology Stack"
+            optional: true
+          - heading: "### Infrastructure"
+            optional: true
+          - heading: "### Data Requirements"
+            optional: true
+
+      - heading: "## User Stories"
+        optional: true
+        required_text:
+          - "As a"
+          - "I want"
+          - "So that"
+
+      - heading: "## Acceptance Criteria"
+        required_text:
+          - "Given"
+          - "When"
+          - "Then"
+
+      - heading: "## Constraints"
+        optional: true
+        children:
+          - heading: "### Business Constraints"
+            optional: true
+          - heading: "### Technical Constraints"
+            optional: true
+          - heading: "### Time Constraints"
+            optional: true
+          - heading: "### Budget Constraints"
+            optional: true
+
+      - heading: "## Dependencies"
+        optional: true
+        required_text:
+          - "depends on"
+
+      - heading: "## Assumptions"
+        optional: true
+
+      - heading: "## Risks"
+        optional: true
+        children:
+          - heading: "### Technical Risks"
+            optional: true
+          - heading: "### Business Risks"
+            optional: true
+          - heading: "### Mitigation Strategies"
+            optional: true
+
+      - heading: "## Success Metrics"
+        optional: true
+        required_text:
+          - "metric"
+          - "measure"
+
+      - heading: "## Glossary"
+        optional: true
+
+      - heading: "## Appendix"
+        optional: true
